@@ -1,18 +1,18 @@
 # Lightroom MCP
 
-Das Basissetup enthält einen Python-MCP-Server und ein Lua-Plug-in für Adobe Lightroom Classic. Die Verbindung zwischen beiden und die Lightroom-Tools folgen später.
+The baseline includes a Python MCP server and a Lua plug-in for Adobe Lightroom Classic. The connection between them and the Lightroom tools are planned for future steps.
 
 ## Server
 
-Mit Python 3.11 oder neuer im Repository-Stammverzeichnis ausführen.
+Run these commands from the repository root with Python 3.11 or later.
 
 ```sh
 python3 -m venv server/.venv
 server/.venv/bin/python -m pip install -e ./server
 ```
 
-Im MCP-Client `stdio` als Transport und den absoluten Pfad zu `server/.venv/bin/lightroom-mcp` als Kommando eintragen. Für einen ersten Check den Server mit dem Client verbinden und die Tool-Liste abrufen. Sie ist im Basissetup leer.
+In the MCP client, select `stdio` as the transport and enter the absolute path to `server/.venv/bin/lightroom-mcp` as the command. To verify the setup, connect the client to the server and request the tool list. The baseline returns an empty list.
 
-## Lightroom-Classic-Plug-in
+## Lightroom Classic plug-in
 
-In Lightroom Classic 13.0 oder neuer **Datei → Zusatzmodul-Manager → Hinzufügen** öffnen und `plugin/LightroomMCP.lrplugin` auswählen. Das Zusatzmodul erscheint als **Lightroom MCP**.
+In Lightroom Classic 13.0 or later, open **File → Plug-in Manager → Add** and select `plugin/LightroomMCP.lrplugin`. The plug-in appears as **Lightroom MCP**.
