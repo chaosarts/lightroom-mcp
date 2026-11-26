@@ -1,6 +1,6 @@
 # Lightroom MCP
 
-Lightroom MCP connects a Python MCP server to a Lua plug-in for Adobe Lightroom Classic.
+Lightroom MCP connects a Python MCP server to a Lua plug-in for Adobe Lightroom Classic. See the [project plan](documents/PROJECT_PLAN.md) for the roadmap and current status.
 
 ## Server
 

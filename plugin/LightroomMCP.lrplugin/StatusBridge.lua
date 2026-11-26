@@ -26,30 +26,36 @@ function bridge.start()
             end
         end)
 
-        local function reconnect(socket)
-            if currentTask == task and _PLUGIN.enabled then
-                socket:reconnect()
-            end
-        end
-
-        task.socket = LrSocket.bind {
-            functionContext = context,
-            plugin = _PLUGIN,
-            port = PORT,
-            mode = "send",
-            onConnected = function(socket)
-                socket:send(RESPONSE)
-            end,
-            onClosed = reconnect,
-            onError = function(socket, err)
-                if err == "timeout" then
-                    reconnect(socket)
-                end
-            end,
-        }
-
         while currentTask == task and _PLUGIN.enabled do
-            LrTasks.sleep(0.25)
+            LrFunctionContext.callWithContext("Lightroom MCP status socket", function(socketContext)
+                local finished = false
+                task.socket = LrSocket.bind {
+                    functionContext = socketContext,
+                    plugin = _PLUGIN,
+                    port = PORT,
+                    mode = "send",
+                    onConnected = function(socket)
+                        socket:send(RESPONSE)
+                        finished = true
+                    end,
+                    onClosed = function()
+                        finished = true
+                    end,
+                    onError = function()
+                        finished = true
+                    end,
+                }
+
+                -- A send socket may stay open after its client disconnects.
+                -- Give the response time to flush, then bind a fresh socket.
+                repeat
+                    LrTasks.sleep(0.05)
+                until finished or currentTask ~= task or not _PLUGIN.enabled
+                if finished then
+                    LrTasks.sleep(0.05)
+                end
+                task.socket = nil
+            end)
         end
     end)
 end
