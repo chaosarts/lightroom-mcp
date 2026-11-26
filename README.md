@@ -42,6 +42,12 @@ Select one photo and call `lightroom_preview_look` with absolute Lightroom SDK s
 }
 ```
 
-The tool applies the settings to a new virtual copy named **Lightroom MCP Preview** and leaves the source photo selected. It returns the copy ID, the Develop settings read back from the copy, the protected values before and after applying the look, and a JPEG preview.
+The tool applies the settings to a new virtual copy named **Lightroom MCP Preview** and leaves the source photo selected. It returns a preview ID, the copy ID, the Develop settings read back from the copy, the protected values before and after applying the look, and a JPEG preview.
 
 Light controls, Temperature, and Tint are protected. The tool also guards settings that reset or change the meaning of those controls, including Auto Tone, white balance mode, HDR edit mode, and Process Version. Proposals containing those settings are rejected before a copy is created.
+
+## Save an approved look
+
+After approving a preview, call `lightroom_save_preset` with its `preview_id` and the preset `name`. The tool returns the path to an XMP file under `~/.lightroom-mcp/presets`. Lightroom Classic adds it to **User Presets** when you import it via **Develop → Presets → + → Import Presets**. See [Adobe's import instructions](https://helpx.adobe.com/lightroom-classic/desktop/process-and-develop-photos/apply-presets.html).
+
+The preset includes only settings requested for the approved preview, using the values Lightroom read back from the virtual copy. Export currently supports Presence, Tone Curve, Color Mixer, Color Grading, grain, and post-crop vignette settings listed in [the exporter](server/src/lightroom_mcp/preset.py). If a setting cannot be exported, the tool rejects the entire save. Preview IDs are valid for the 32 most recent previews in the current MCP server process.

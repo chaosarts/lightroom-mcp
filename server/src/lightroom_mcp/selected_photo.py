@@ -11,6 +11,8 @@ from typing import Any
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, ImageContent, TextContent
 
+from .preset import export_preset, remember_preview
+
 PHOTO_TIMEOUT = 15
 
 
@@ -46,7 +48,16 @@ async def _read_response(directory: Path, timeout: int, payload: str) -> bytes:
             await asyncio.sleep(0.1)
 
 
-async def _request_photo(operation: str, timeout: int, payload: str = "") -> CallToolResult:
+async def _request_photo(
+    operation: str, timeout: int, develop_settings: dict[str, Any] | None = None
+) -> CallToolResult:
+    payload = ""
+    if develop_settings is not None:
+        try:
+            payload = json.dumps(develop_settings, ensure_ascii=False, allow_nan=False)
+            payload.encode("utf-8")
+        except ValueError as error:
+            raise ToolError("Develop settings must contain valid JSON values.") from error
     try:
         with tempfile.TemporaryDirectory(
             prefix=f"{operation}-", dir=_bridge_directory()
@@ -68,6 +79,11 @@ async def _request_photo(operation: str, timeout: int, payload: str = "") -> Cal
         raise ToolError(metadata["error"])
     if not isinstance(metadata.get("develop_settings"), dict) or not jpeg.startswith(b"\xff\xd8"):
         raise ToolError("Lightroom Classic sent an incomplete selected photo response.")
+    if develop_settings is not None:
+        protected_before = metadata.get("protected_before")
+        if not isinstance(protected_before, dict) or protected_before != metadata.get("protected_after"):
+            raise ToolError("Lightroom Classic did not verify the preview's protected settings.")
+        metadata["preview_id"] = remember_preview(develop_settings, metadata["develop_settings"])
 
     return CallToolResult(
         structured_content=metadata,
@@ -95,9 +111,17 @@ async def lightroom_preview_look(develop_settings: dict[str, Any]) -> CallToolRe
     """
     if not develop_settings:
         raise ToolError("Supply a non-empty object of Develop settings.")
+    return await _request_photo("preview-look", 30, develop_settings)
+
+
+def lightroom_save_preset(preview_id: str, name: str) -> dict[str, str]:
+    """Export an approved preview as an XMP preset. Call only after the user approves the preview.
+
+    Pass the preview_id from lightroom_preview_look and the desired preset name.
+    Import the returned XMP file through the Lightroom Classic Develop Presets panel.
+    """
     try:
-        payload = json.dumps(develop_settings, ensure_ascii=False, allow_nan=False)
-        payload.encode("utf-8")
-    except ValueError as error:
-        raise ToolError("Develop settings must contain valid JSON values.") from error
-    return await _request_photo("preview-look", 30, payload)
+        directory = _bridge_directory() / "presets"
+    except OSError as error:
+        raise ToolError("Could not access the local Lightroom MCP preset directory.") from error
+    return export_preset(directory, preview_id, name)

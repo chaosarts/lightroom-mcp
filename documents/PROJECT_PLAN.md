@@ -30,7 +30,6 @@ After step 4, the Lightroom workflow can be tested with a manually specified loo
 
 ## Open technical questions
 
-- **Step 4.** Verify how to save a reusable preset that appears in Lightroom.
 - **Steps 5–7.** Use sample image pairs to determine which visual features are useful for comparison and when a match is too uncertain to assess. The photographer uses the preview to judge whether the look is close enough.
 
 ## Resuming in a new session
@@ -44,4 +43,5 @@ After step 4, the Lightroom workflow can be tested with a manually specified loo
 - **Completed.** Step 1. The status tool introduced in `1338445` and fixed in `569ec9d` passed repeated calls, plug-in deactivation, and reactivation in Lightroom Classic.
 - **Completed.** Step 2. `lightroom_selected_photo` returns the active photo's Develop settings and a JPEG preview. In Lightroom Classic on macOS, one standalone and three concurrent MCP calls each returned 187 settings and a JPEG for the selected photo. With the selection cleared, the tool reported that no photo was selected.
 - **Completed.** Step 3. `lightroom_preview_look` applies a proposal to a new virtual copy and verifies the protected Develop values before returning a JPEG. In Lightroom Classic on macOS, it rejected 14 proposals containing protected keys. A proposal using Saturation and the parametric tone curve produced a different JPEG, preserved all 22 protected values reported by the SDK, and left the source settings unchanged. This test exercised the current process version.
-- **Next.** Step 4. Save an approved look as a reusable Lightroom preset. Apply it to a second corrected photo and verify that the look settings took effect and the protected values stayed unchanged.
+- **In progress.** Step 4. `lightroom_save_preset` exports the approved preview as an XMP file for import into Lightroom Classic. Export, import into User Presets, and application to a separate virtual copy of the corrected source RAW were verified. The Lightroom catalog history confirmed that all five requested values took effect and all 16 recorded protected values matched before and after. The source Develop settings matched their initial values. Export supports the settings documented in the README.
+- **Next.** Apply the imported preset to a second corrected RAW photo and compare its look settings and protected values before and after. The test catalog used for the first check contained one original RAW.
