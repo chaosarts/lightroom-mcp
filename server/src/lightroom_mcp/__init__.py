@@ -3,6 +3,8 @@ from typing import TypedDict
 
 from mcp.server import MCPServer
 
+from .selected_photo import lightroom_selected_photo
+
 LIGHTROOM_STATUS_PORT = 47687
 LIGHTROOM_STATUS_RESPONSE = b"lightroom-mcp:status:1\n"
 
@@ -38,4 +40,5 @@ async def lightroom_status() -> LightroomStatus:
 def main() -> None:
     server = MCPServer("Lightroom Classic", version="0.1.0")
     server.tool()(lightroom_status)
+    server.tool()(lightroom_selected_photo)
     server.run(transport="stdio")
