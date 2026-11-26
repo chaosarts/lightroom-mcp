@@ -28,3 +28,20 @@ Call `lightroom_status` in the MCP client. Expect `{"reachable": true}` when the
 Select a photo in Lightroom Classic and call `lightroom_selected_photo` without arguments. The tool returns the active photo's Develop settings as JSON and a rendered JPEG as MCP image content. With multiple photos selected, it uses the active photo. With no selection, it asks you to select a photo.
 
 Run Lightroom Classic and the MCP server under the same OS user. Photo requests use temporary files under `~/.lightroom-mcp`.
+
+## Preview a look
+
+Select one photo and call `lightroom_preview_look` with absolute Lightroom SDK setting values. For example:
+
+```json
+{
+  "develop_settings": {
+    "ParametricLights": 20,
+    "Saturation": -15
+  }
+}
+```
+
+The tool applies the settings to a new virtual copy named **Lightroom MCP Preview** and leaves the source photo selected. It returns the copy ID, the Develop settings read back from the copy, the protected values before and after applying the look, and a JPEG preview.
+
+Light controls, Temperature, and Tint are protected. The tool also guards settings that reset or change the meaning of those controls, including Auto Tone, white balance mode, HDR edit mode, and Process Version. Proposals containing those settings are rejected before a copy is created.

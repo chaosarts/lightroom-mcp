@@ -6,6 +6,7 @@ import stat
 import tempfile
 import time
 from pathlib import Path
+from typing import Any
 
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, ImageContent, TextContent
@@ -24,15 +25,15 @@ def _bridge_directory() -> Path:
     return directory
 
 
-async def _read_response(directory: Path) -> bytes:
+async def _read_response(directory: Path, timeout: int, payload: str) -> bytes:
     pending = directory / "pending"
     marker = directory / "request.tmp"
-    marker.write_text(str(int(time.time()) + PHOTO_TIMEOUT), encoding="ascii")
+    marker.write_text(f"{int(time.time()) + timeout}\n{payload}", encoding="utf-8")
     marker.rename(pending)
 
     response = directory / "response"
     claim_deadline = time.monotonic() + 2
-    async with asyncio.timeout(PHOTO_TIMEOUT):
+    async with asyncio.timeout(timeout):
         while True:
             try:
                 return response.read_bytes()
@@ -45,15 +46,14 @@ async def _read_response(directory: Path) -> bytes:
             await asyncio.sleep(0.1)
 
 
-async def lightroom_selected_photo() -> CallToolResult:
-    """Read the active Lightroom Classic photo's Develop settings and JPEG preview."""
+async def _request_photo(operation: str, timeout: int, payload: str = "") -> CallToolResult:
     try:
         with tempfile.TemporaryDirectory(
-            prefix="selected-photo-", dir=_bridge_directory()
+            prefix=f"{operation}-", dir=_bridge_directory()
         ) as directory:
-            response = await _read_response(Path(directory))
+            response = await _read_response(Path(directory), timeout, payload)
     except TimeoutError as error:
-        raise ToolError("Lightroom Classic timed out reading the selected photo.") from error
+        raise ToolError("Lightroom Classic timed out processing the photo request.") from error
     except OSError as error:
         raise ToolError("Could not access the local Lightroom MCP photo bridge.") from error
 
@@ -80,3 +80,24 @@ async def lightroom_selected_photo() -> CallToolResult:
             ),
         ],
     )
+
+
+async def lightroom_selected_photo() -> CallToolResult:
+    """Read the active Lightroom Classic photo's Develop settings and JPEG preview."""
+    return await _request_photo("selected-photo", PHOTO_TIMEOUT)
+
+
+async def lightroom_preview_look(develop_settings: dict[str, Any]) -> CallToolResult:
+    """Apply Develop settings to a new virtual copy of the selected photo and render its preview.
+
+    Use Lightroom Develop setting keys and absolute values. Light and white balance
+    controls are protected.
+    """
+    if not develop_settings:
+        raise ToolError("Supply a non-empty object of Develop settings.")
+    try:
+        payload = json.dumps(develop_settings, ensure_ascii=False, allow_nan=False)
+        payload.encode("utf-8")
+    except ValueError as error:
+        raise ToolError("Develop settings must contain valid JSON values.") from error
+    return await _request_photo("preview-look", 30, payload)

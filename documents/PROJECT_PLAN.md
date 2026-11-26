@@ -30,7 +30,6 @@ After step 4, the Lightroom workflow can be tested with a manually specified loo
 
 ## Open technical questions
 
-- **Step 3.** Verify which Develop settings the SDK can write in Lightroom Classic. Identify the SDK keys for the protected controls and test the safeguard against them.
 - **Step 4.** Verify how to save a reusable preset that appears in Lightroom.
 - **Steps 5–7.** Use sample image pairs to determine which visual features are useful for comparison and when a match is too uncertain to assess. The photographer uses the preview to judge whether the look is close enough.
 
@@ -44,4 +43,5 @@ After step 4, the Lightroom workflow can be tested with a manually specified loo
 
 - **Completed.** Step 1. The status tool introduced in `1338445` and fixed in `569ec9d` passed repeated calls, plug-in deactivation, and reactivation in Lightroom Classic.
 - **Completed.** Step 2. `lightroom_selected_photo` returns the active photo's Develop settings and a JPEG preview. In Lightroom Classic on macOS, one standalone and three concurrent MCP calls each returned 187 settings and a JPEG for the selected photo. With the selection cleared, the tool reported that no photo was selected.
-- **Next.** Step 3. Identify the SDK keys for protected controls and apply a manually specified look to a virtual copy. Verify that permitted settings render and protected values stay unchanged.
+- **Completed.** Step 3. `lightroom_preview_look` applies a proposal to a new virtual copy and verifies the protected Develop values before returning a JPEG. In Lightroom Classic on macOS, it rejected 14 proposals containing protected keys. A proposal using Saturation and the parametric tone curve produced a different JPEG, preserved all 22 protected values reported by the SDK, and left the source settings unchanged. This test exercised the current process version.
+- **Next.** Step 4. Save an approved look as a reusable Lightroom preset. Apply it to a second corrected photo and verify that the look settings took effect and the protected values stayed unchanged.

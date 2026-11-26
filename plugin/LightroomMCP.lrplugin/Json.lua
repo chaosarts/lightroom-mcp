@@ -47,4 +47,93 @@ local function encode(value)
     return "{" .. table.concat(parts, ",") .. "}"
 end
 
-return encode
+local function decode(text)
+    local position = 1
+    local escapes = { ['"'] = '"', ['\\'] = '\\', ['/'] = '/', b = '\b',
+        f = '\f', n = '\n', r = '\r', t = '\t' }
+
+    local function peek()
+        position = text:find("%S", position) or (#text + 1)
+        return text:sub(position, position)
+    end
+
+    local function readString()
+        position = position + 1
+        local parts = {}
+        while true do
+            local index = text:find('[%z\1-\31\\"]', position)
+            assert(index, "Unterminated JSON string")
+            parts[#parts + 1] = text:sub(position, index - 1)
+            local character = text:sub(index, index)
+            position = index + 1
+            if character == '"' then
+                return table.concat(parts)
+            end
+            assert(character == '\\', "Invalid JSON string")
+            local escape = text:sub(position, position)
+            position = position + 1
+            if escape == "u" then
+                -- The Python bridge sends UTF-8, escaping only control characters.
+                local code = text:sub(position, position + 3)
+                assert(code:match("^00[0-7]%x$"), "Expected UTF-8 in JSON string")
+                parts[#parts + 1] = string.char(tonumber(code, 16))
+                position = position + 4
+            else
+                parts[#parts + 1] = assert(escapes[escape], "Invalid JSON escape")
+            end
+        end
+    end
+
+    local readValue
+    local function readTable(object)
+        local result = {}
+        local closing = object and "}" or "]"
+        position = position + 1
+        if peek() ~= closing then
+            while true do
+                local key = #result + 1
+                if object then
+                    assert(peek() == '"', "Expected JSON object key")
+                    key = readString()
+                    assert(peek() == ":", "Expected colon after JSON key")
+                    position = position + 1
+                end
+                assert(result[key] == nil, "Duplicate JSON key")
+                result[key] = readValue()
+                if peek() == closing then
+                    break
+                end
+                assert(peek() == ",", "Expected JSON separator")
+                position = position + 1
+            end
+        end
+        position = position + 1
+        return result
+    end
+
+    function readValue()
+        local token = peek()
+        if token == '"' then
+            return readString()
+        elseif token == "{" or token == "[" then
+            return readTable(token == "{")
+        elseif text:sub(position, position + 3) == "true" then
+            position = position + 4
+            return true
+        elseif text:sub(position, position + 4) == "false" then
+            position = position + 5
+            return false
+        end
+        local number = text:match("^[%-0-9.eE+]+", position)
+        local value = number and tonumber(number)
+        assert(value and math.abs(value) < math.huge, "Expected a finite JSON value")
+        position = position + #number
+        return value
+    end
+
+    local value = readValue()
+    assert(peek() == "", "Unexpected trailing JSON data")
+    return value
+end
+
+return { encode = encode, decode = decode }
